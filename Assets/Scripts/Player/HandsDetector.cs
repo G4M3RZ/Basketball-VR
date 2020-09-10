@@ -1,124 +1,79 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class HandsDetector : MonoBehaviour
 {
-    private GameObject _seleccion;
-    private Vector3 _ballNewPos;
+    private Transform _ball;
+    public Material _ballMat;
     private Rigidbody _ballRgb;
+
+    public GvrReticlePointer _reticle;
     private PlayerBody _pb;
     private bool _isGrabed;
 
-    [Range(0,50)]
-    public float _frontForce, _upForce;
-    [Range(0,5)]
-    public float _selectionSpeed;
-    [Range(0,10)]
-    public float _timeToDrop;
+    [Range(0,50)] public float _frontForce, _upForce;
+    [Range(0, 5)] public float _catchSpeed, _dropTime;
 
-    private Image _selectionMark, _dropMark;
-    private float _fillSelection, _fillDrop;
-
-    private void Start()
+    private void Awake()
     {
+        _ballMat.color = Color.white;
+        _reticle.reticleGrowthSpeed = _catchSpeed * 2;
         _pb = GetComponentInParent<PlayerBody>();
-        _selectionMark = GameObject.FindGameObjectWithTag("Canvas").transform.GetChild(0).GetChild(0).GetComponent<Image>();
-        _dropMark = GameObject.FindGameObjectWithTag("Canvas").transform.GetChild(0).GetChild(1).GetComponent<Image>();
-        _selectionMark.fillAmount = _fillSelection = _fillDrop = 0;
     }
     private void Update()
     {
-        CathBall();
-        ChangeMaterial();
-        
-        if (_seleccion != null)
+        if (_ball != null && _isGrabed)
         {
-            if (_seleccion.transform.localPosition == Vector3.zero)
-                DropBall();
-        }
-    }
-
-    void CathBall()
-    {
-        if(_seleccion != null && !_isGrabed)
-        {
-            _selectionMark.fillAmount = _fillSelection;
-            _fillSelection = (_fillSelection < 1) ? _fillSelection += Time.deltaTime * _selectionSpeed : _fillSelection = 1;
-
-            if (_fillSelection == 1)
-            {
-                _ballRgb = _seleccion.GetComponent<Rigidbody>();
-                _ballRgb.constraints = RigidbodyConstraints.FreezeAll;
-                _seleccion.transform.parent = transform;
-                _ballNewPos = _seleccion.transform.localPosition;
-                _isGrabed = true;
-            }
-        }
-        else
-        {
-            _selectionMark.fillAmount = _fillSelection = 0;
-        }
-
-        if (_isGrabed)
-        {
-            _seleccion.transform.localRotation = Quaternion.Euler(0, -90, 0);
-            _seleccion.transform.localPosition = _ballNewPos;
-            _ballNewPos = Vector3.Lerp(_ballNewPos, Vector3.zero, Time.deltaTime * 10);
+            _ball.localPosition = Vector3.Lerp(_ball.localPosition, Vector3.zero, Time.deltaTime * 10);
+            ChangeMaterial();
         }
     }
     void ChangeMaterial()
     {
-        if (_pb._isUp)
-        {
-
-        }
-        else
-        {
-
-        }
+        Color setAlpha = _ballMat.color;
+        setAlpha.a = (_pb._isUp) ? 0.5f : 1;
+        _ballMat.color = setAlpha;
     }
-    void DropBall()
+    IEnumerator GrabBall(Transform ball)
     {
-        if (_seleccion != null && _isGrabed)
-        {
-            _dropMark.fillAmount = _fillDrop;
-            _fillDrop = (_fillDrop < 1) ? _fillDrop += Time.deltaTime / _selectionSpeed : _fillDrop = 1;
+        yield return new WaitUntil(() => _reticle.ReticleInnerDiameter >= 0.025f);
 
-            if(_fillDrop == 1)
-            {
-                _dropMark.fillAmount = _fillDrop = 0;
+        _ball = ball;
+        _ballRgb = _ball.GetComponent<Rigidbody>();
+        _ballRgb.constraints = RigidbodyConstraints.FreezeAll;
+        _ball.parent = transform;
+        _ball.localRotation = Quaternion.Euler(0, -90, 0);
+        _isGrabed = true;
 
-                _seleccion.transform.parent = null;
-                _seleccion = null;
+        yield return new WaitUntil(() => _ball.localPosition == Vector3.zero);
 
-                _ballRgb.constraints = ~RigidbodyConstraints.FreezeAll;
-
-                if (_pb._isUp)
-                {
-                    _ballRgb.AddForce(transform.forward * _frontForce * 10);
-                    _ballRgb.AddForce(transform.up * _upForce * 20);
-                }
-                else
-                {
-                    _ballRgb.AddForce(transform.forward * _frontForce * 10);
-                }
-
-                _ballRgb = null;
-                _isGrabed = false;
-            }
-        }
+        StartCoroutine(DropBall());
     }
-
-    public void ObjectSelected(GameObject _obj)
+    IEnumerator DropBall()
     {
-        if(!_isGrabed)
-            _seleccion = _obj;
+        yield return new WaitForSeconds(_dropTime);
+
+        _isGrabed = false;
+        _ball.parent = null;
+        _ballRgb.constraints = ~RigidbodyConstraints.FreezeAll;
+
+        Vector3 upForce = transform.up * _upForce * 20;
+        Vector3 frontFoce = transform.forward *_frontForce * 10;
+        Vector3 ballDirection = (_pb._isUp) ? frontFoce + upForce : frontFoce;
+        _ballRgb.AddForce(ballDirection);
+
+        _ballMat.color = Color.white;
+        _ball = null;
+        _ballRgb = null;
+    }
+    public void ObjectSelected(Transform _obj)
+    {
+        if (!_isGrabed)
+            StartCoroutine(GrabBall(_obj));
     }
     public void ObjectDeselect()
     {
         if (!_isGrabed)
-            _seleccion = null;
+            StopAllCoroutines();
     }
 }

@@ -1,19 +1,21 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using TMPro;
+﻿using UnityEngine;
 
 public class AddScore : MonoBehaviour
 {
-    private CanvasController _canvasController;
+    private ScoreController _score;
+    private ParticleSystem _ps;
     
     private void Awake()
     {
-        _canvasController = GameObject.FindGameObjectWithTag("Canvas").transform.GetChild(1).GetComponent<CanvasController>();
+        _score = GameObject.FindGameObjectWithTag("Canvas").GetComponent<ScoreController>();
+        _ps = transform.GetChild(0).GetComponent<ParticleSystem>();
     }
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Ball"))
-            _canvasController._score++;
+        {
+            _ps.Play();
+            _score.AddScore();
+        }
     }
 }

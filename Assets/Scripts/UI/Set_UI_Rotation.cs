@@ -10,6 +10,7 @@ public class Set_UI_Rotation : MonoBehaviour
             Vector3 turnBack = new Vector3(-1, 1, 1);
             transform.localScale = turnBack;
             transform.LookAt(_target);
+            Destroy(this);
         }
     }
 }

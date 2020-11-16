@@ -2,13 +2,13 @@
 
 public class AddScore : MonoBehaviour
 {
-    private ScoreController _score;
     private ParticleSystem _ps;
+    private ScoreController _score;
     
     private void Awake()
     {
+        _ps = GetComponent<ParticleSystem>();
         _score = GameObject.FindGameObjectWithTag("Canvas").GetComponent<ScoreController>();
-        _ps = transform.GetChild(0).GetComponent<ParticleSystem>();
     }
     private void OnTriggerEnter(Collider other)
     {
